@@ -1,0 +1,32 @@
+{
+  "name": "reflow",
+  "version": "0.1.0",
+  "author": "wafrelka",
+  "type": "module",
+  "scripts": {
+    "build": "esbuild --bundle --platform=node --target=node20 --outdir=dist --minify src/*.ts",
+    "bundle": "${npm_execpath} run build && ./scripts/pack dist/*.js",
+    "clean": "rm -rf dist",
+    "check": "biome lint . && biome format . && tsc --noEmit",
+    "fix": "biome lint --apply .",
+    "format": "biome format --write .",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@aws-sdk/client-sqs": "^3.632.0",
+    "@octokit/webhooks": "^13.3.0",
+    "minimatch": "^10.0.1",
+    "octokit": "^4.0.2",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "1.8.3",
+    "@types/aws-lambda": "^8.10.143",
+    "@types/node": "^20.14.8",
+    "esbuild": "^0.23.1",
+    "typescript": "^5.5.4",
+    "vitest": "^3.1.2"
+  },
+  "packageManager": "pnpm@10.8.0"
+}

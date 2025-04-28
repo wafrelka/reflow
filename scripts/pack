@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+
+set -ueo pipefail
+
+temp_dir="$(mktemp -d)"
+_clean() {
+    rm -rf "${temp_dir}"
+}
+trap _clean EXIT
+
+for src in "$@"; do
+    dest="${src%.js}.zip"
+    cp "${src}" "${temp_dir}/index.js"
+    pushd "${temp_dir}" >/dev/null
+    zip -q "archive.zip" "index.js"
+    popd
+    mv "${temp_dir}/archive.zip" "${dest}"
+    echo "created: ${dest}"
+done
