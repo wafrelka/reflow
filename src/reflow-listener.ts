@@ -5,11 +5,11 @@ import type { LambdaFunctionURLHandler } from "aws-lambda";
 import { z } from "zod";
 
 import type { RepositoryEvent } from "./lib/event";
-import { fetchSecret, loadConfigFromLambdaEnv } from "./lib/aws";
+import { fetchParameter, loadExtensionConfigFromLambdaEnv } from "./lib/aws";
 
-const secretConfig = loadConfigFromLambdaEnv();
-const { WEBHOOK_SECRET_SECRET_ID, SQS_QUEUE_URL } = process.env;
-assert(WEBHOOK_SECRET_SECRET_ID !== undefined, "`WEBHOOK_SECRET_SECRET_ID` must be set");
+const extConfig = loadExtensionConfigFromLambdaEnv();
+const { WEBHOOK_SECRET_PARAM_NAME, SQS_QUEUE_URL } = process.env;
+assert(WEBHOOK_SECRET_PARAM_NAME !== undefined, "`WEBHOOK_SECRET_PARAM_NAME` must be set");
 
 const GitHubPushEvent = z.object({
   ref: z.string(),
@@ -30,7 +30,7 @@ export const handler: LambdaFunctionURLHandler = async (event, context) => {
     return { statusCode: 403, body: "signature missing\n" };
   }
 
-  const secret = await fetchSecret(WEBHOOK_SECRET_SECRET_ID, secretConfig);
+  const secret = await fetchParameter(WEBHOOK_SECRET_PARAM_NAME, extConfig);
   const webhooks = new Webhooks({ secret });
 
   const ok = await webhooks.verify(body, sig);

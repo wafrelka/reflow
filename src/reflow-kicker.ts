@@ -6,14 +6,14 @@ import assert from "node:assert";
 
 import { extractManifest } from "./lib/manifest";
 import { parseRepository, RepositoryEvent } from "./lib/event";
-import { fetchSecret, loadConfigFromLambdaEnv } from "./lib/aws";
+import { fetchParameter, loadExtensionConfigFromLambdaEnv } from "./lib/aws";
 import { fetchActiveWorkflows, fetchDefaultBranch } from "./lib/github";
 
-const secretConfig = loadConfigFromLambdaEnv();
+const extConfig = loadExtensionConfigFromLambdaEnv();
 
-const { GH_APP_ID, GH_APP_PRIVATE_KEY_SECRET_ID, WORKFLOW_REPOSITORY } = process.env;
+const { GH_APP_ID, GH_APP_PRIVATE_KEY_PARAM_NAME, WORKFLOW_REPOSITORY } = process.env;
 assert(GH_APP_ID !== undefined, "`GH_APP_ID` must be set");
-assert(GH_APP_PRIVATE_KEY_SECRET_ID !== undefined, "`GH_APP_PRIVATE_KEY_SECRET_ID` must be set");
+assert(GH_APP_PRIVATE_KEY_PARAM_NAME !== undefined, "`GH_APP_PRIVATE_KEY_PARAM_NAME` must be set");
 assert(WORKFLOW_REPOSITORY !== undefined, "`WORKFLOW_REPOSITORY` must be set");
 
 const PARSED_WORKFLOW_REPOSITORY = parseRepository(WORKFLOW_REPOSITORY);
@@ -101,7 +101,7 @@ const handleRecord = async (record: SQSRecord, src: WorkflowSource, octokit: Oct
 export const handler: SQSHandler = async (event, context) => {
   const { owner, name } = PARSED_WORKFLOW_REPOSITORY;
 
-  const privateKey = await fetchSecret(GH_APP_PRIVATE_KEY_SECRET_ID, secretConfig);
+  const privateKey = await fetchParameter(GH_APP_PRIVATE_KEY_PARAM_NAME, extConfig);
   const app = new App({ appId: GH_APP_ID, privateKey });
   const { data } = await app.octokit.rest.apps.getRepoInstallation({ owner, repo: name });
   const octokit = await app.getInstallationOctokit(data.id);

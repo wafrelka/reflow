@@ -1,36 +1,41 @@
 import { z } from "zod";
 
-export type SecretsExtensionConfig = {
+export type ParametersSecretsExtensionConfig = {
   baseUrl: string;
   token: string;
 };
 
-const GetSecretResponse = z.object({ SecretString: z.string() });
-type GetSecretResponse = z.infer<typeof GetSecretResponse>;
+const GetParameterResponse = z.object({ Parameter: z.object({ Value: z.string() }) });
+type GetParameterResponse = z.infer<typeof GetParameterResponse>;
 
-const SECRETS_EXTENSION_TOKEN_HEADER_NAME = "X-Aws-Parameters-Secrets-Token";
-const DEFAULT_SECRETS_EXTENSION_HTTP_PORT = "2773";
+const PARAMETERS_SECRETS_EXTENSION_TOKEN_HEADER_NAME = "X-Aws-Parameters-Secrets-Token";
+const DEFAULT_PARAMETERS_SECRETS_EXTENSION_HTTP_PORT = "2773";
 
-export const loadConfigFromLambdaEnv = (): SecretsExtensionConfig => {
+export const loadExtensionConfigFromLambdaEnv = (): ParametersSecretsExtensionConfig => {
   const { PARAMETERS_SECRETS_EXTENSION_HTTP_PORT, AWS_SESSION_TOKEN } = process.env;
   if (AWS_SESSION_TOKEN === undefined) {
     throw new Error("`AWS_SESSION_TOKEN` must be set");
   }
 
-  const port = PARAMETERS_SECRETS_EXTENSION_HTTP_PORT || DEFAULT_SECRETS_EXTENSION_HTTP_PORT;
+  const port =
+    PARAMETERS_SECRETS_EXTENSION_HTTP_PORT || DEFAULT_PARAMETERS_SECRETS_EXTENSION_HTTP_PORT;
   const baseUrl = `http://localhost:${port}`;
   return { baseUrl, token: AWS_SESSION_TOKEN };
 };
 
-// Fetch a secret via Parameters and Secrets Lambda Extension
-export const fetchSecret = async (id: string, config: SecretsExtensionConfig): Promise<string> => {
+// Fetch a parameter via Parameters and Secrets Lambda Extension
+export const fetchParameter = async (
+  name: string,
+  config: ParametersSecretsExtensionConfig,
+): Promise<string> => {
   const { baseUrl, token } = config;
 
-  const url = new URL(`${baseUrl}/secretsmanager/get`);
-  url.searchParams.append("secretId", id);
-  const headers = { [SECRETS_EXTENSION_TOKEN_HEADER_NAME]: token };
+  const url = new URL(`${baseUrl}/systemsmanager/parameters/get`);
+  url.searchParams.append("name", name);
+  url.searchParams.append("withDecryption", "true");
+  const headers = { [PARAMETERS_SECRETS_EXTENSION_TOKEN_HEADER_NAME]: token };
 
-  console.log(`fetching secret from extension (url = ${url})`);
+  console.log(`fetching parameter from extension (url = ${url})`);
   const resp = await fetch(url, { headers });
 
   if (!resp.ok) {
@@ -38,10 +43,10 @@ export const fetchSecret = async (id: string, config: SecretsExtensionConfig): P
     throw Error(`unexpected response from extension: ${resp.status} ${text}`);
   }
   const raw = await resp.json();
-  const { data, error, success } = GetSecretResponse.safeParse(raw);
+  const { data, error, success } = GetParameterResponse.safeParse(raw);
   if (!success) {
     throw Error(`malformed response from extension: ${error}`);
   }
 
-  return data.SecretString;
+  return data.Parameter.Value;
 };
