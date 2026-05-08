@@ -5,39 +5,41 @@ import { extractManifest, matchManifest, type ReflowManifest } from "./manifest"
 describe("extractManifest", () => {
   it("parses workflow config", () => {
     const input = `
-      # reflow: repository=foo/bar push=master
+      # reflow: repository=foo/bar push=refs/heads/master
       on: {workflow_dipatch: {}}
       jobs: []
     `;
     const expected: ReflowManifest = {
-      triggers: [{ repository: "foo/bar", pushTargets: ["master"] }],
+      triggers: [{ repository: "foo/bar", pushTargets: ["refs/heads/master"] }],
     };
     expect(extractManifest(input)).toEqual(expected);
   });
 
   it("parses workflow config with multiple push targets", () => {
     const input = `
-      # reflow: repository=foo/bar push=master,develop
+      # reflow: repository=foo/bar push=refs/heads/master,refs/heads/develop
       on: {workflow_dipatch: {}}
       jobs: []
     `;
     const expected: ReflowManifest = {
-      triggers: [{ repository: "foo/bar", pushTargets: ["master", "develop"] }],
+      triggers: [
+        { repository: "foo/bar", pushTargets: ["refs/heads/master", "refs/heads/develop"] },
+      ],
     };
     expect(extractManifest(input)).toEqual(expected);
   });
 
   it("parses workflow config with multiple triggers", () => {
     const input = `
-      # reflow: repository=foo/bar push=master,develop
-      # reflow: repository=baz/qux push=main,dev
+      # reflow: repository=foo/bar push=refs/heads/master,refs/heads/develop
+      # reflow: repository=baz/qux push=refs/heads/main,refs/heads/dev
       on: {workflow_dipatch: {}}
       jobs: []
     `;
     const expected: ReflowManifest = {
       triggers: [
-        { repository: "foo/bar", pushTargets: ["master", "develop"] },
-        { repository: "baz/qux", pushTargets: ["main", "dev"] },
+        { repository: "foo/bar", pushTargets: ["refs/heads/master", "refs/heads/develop"] },
+        { repository: "baz/qux", pushTargets: ["refs/heads/main", "refs/heads/dev"] },
       ],
     };
     expect(extractManifest(input)).toEqual(expected);
@@ -55,7 +57,7 @@ describe("extractManifest", () => {
   it("ignores manifest in the middle of workflow config", () => {
     const input = `
       on: {workflow_dipatch: {}}
-      # reflow: repository=foo/bar push=master
+      # reflow: repository=foo/bar push=refs/heads/master
       jobs: []
     `;
     const expected: ReflowManifest = { triggers: [] };
@@ -64,7 +66,7 @@ describe("extractManifest", () => {
 
   it("returns Error if repository is missing", () => {
     const input = `
-      # reflow: push=master
+      # reflow: push=refs/heads/master
       on: {workflow_dipatch: {}}
       jobs: []
     `;
@@ -86,30 +88,36 @@ describe("extractManifest", () => {
 describe("matchManifest", () => {
   it("returns true when matching found", () => {
     const manifest: ReflowManifest = {
-      triggers: [{ repository: "foo/bar", pushTargets: ["master", "develop"] }],
+      triggers: [
+        { repository: "foo/bar", pushTargets: ["refs/heads/master", "refs/heads/develop"] },
+      ],
     };
     const repo = "foo/bar";
-    const ref = "master";
+    const ref = "refs/heads/master";
     const expected = true;
     expect(matchManifest(manifest, repo, ref)).toEqual(expected);
   });
 
   it("returns false when repository is different", () => {
     const manifest: ReflowManifest = {
-      triggers: [{ repository: "foo/bar", pushTargets: ["master", "develop"] }],
+      triggers: [
+        { repository: "foo/bar", pushTargets: ["refs/heads/master", "refs/heads/develop"] },
+      ],
     };
     const repo = "baz/qux";
-    const ref = "master";
+    const ref = "refs/heads/master";
     const expected = false;
     expect(matchManifest(manifest, repo, ref)).toEqual(expected);
   });
 
   it("returns false when ref is different", () => {
     const manifest: ReflowManifest = {
-      triggers: [{ repository: "foo/bar", pushTargets: ["master", "develop"] }],
+      triggers: [
+        { repository: "foo/bar", pushTargets: ["refs/heads/master", "refs/heads/develop"] },
+      ],
     };
     const repo = "foo/bar";
-    const ref = "wip";
+    const ref = "refs/heads/wip";
     const expected = false;
     expect(matchManifest(manifest, repo, ref)).toEqual(expected);
   });
@@ -117,7 +125,7 @@ describe("matchManifest", () => {
   it("returns false when no triggers found", () => {
     const manifest: ReflowManifest = { triggers: [] };
     const repo = "foo/bar";
-    const ref = "master";
+    const ref = "refs/heads/master";
     const expected = false;
     expect(matchManifest(manifest, repo, ref)).toEqual(expected);
   });
@@ -125,52 +133,52 @@ describe("matchManifest", () => {
   it("returns true when second trigger matches", () => {
     const manifest: ReflowManifest = {
       triggers: [
-        { repository: "baz/qux", pushTargets: ["main"] },
-        { repository: "foo/bar", pushTargets: ["master"] },
+        { repository: "baz/qux", pushTargets: ["refs/heads/main"] },
+        { repository: "foo/bar", pushTargets: ["refs/heads/master"] },
       ],
     };
     const repo = "foo/bar";
-    const ref = "master";
+    const ref = "refs/heads/master";
     const expected = true;
     expect(matchManifest(manifest, repo, ref)).toEqual(expected);
   });
 
   it("returns true when push target contains glob", () => {
     const manifest: ReflowManifest = {
-      triggers: [{ repository: "foo/bar", pushTargets: ["releases/*"] }],
+      triggers: [{ repository: "foo/bar", pushTargets: ["refs/heads/releases/*"] }],
     };
     const repo = "foo/bar";
-    const ref = "releases/v1";
+    const ref = "refs/heads/releases/v1";
     const expected = true;
     expect(matchManifest(manifest, repo, ref)).toEqual(expected);
   });
 
   it("returns false when push target contains unmatched glob", () => {
     const manifest: ReflowManifest = {
-      triggers: [{ repository: "foo/bar", pushTargets: ["releases/*"] }],
+      triggers: [{ repository: "foo/bar", pushTargets: ["refs/heads/releases/*"] }],
     };
     const repo = "foo/bar";
-    const ref = "releases/dev/v1";
+    const ref = "refs/heads/releases/dev/v1";
     const expected = false;
     expect(matchManifest(manifest, repo, ref)).toEqual(expected);
   });
 
   it("returns true when push target contains globstar matching single component", () => {
     const manifest: ReflowManifest = {
-      triggers: [{ repository: "foo/bar", pushTargets: ["releases/**/*"] }],
+      triggers: [{ repository: "foo/bar", pushTargets: ["refs/heads/releases/**/*"] }],
     };
     const repo = "foo/bar";
-    const ref = "releases/v1";
+    const ref = "refs/heads/releases/v1";
     const expected = true;
     expect(matchManifest(manifest, repo, ref)).toEqual(expected);
   });
 
   it("returns true when push target contains globstar matching multiple components", () => {
     const manifest: ReflowManifest = {
-      triggers: [{ repository: "foo/bar", pushTargets: ["releases/**/*"] }],
+      triggers: [{ repository: "foo/bar", pushTargets: ["refs/heads/releases/**/*"] }],
     };
     const repo = "foo/bar";
-    const ref = "releases/dev/v1";
+    const ref = "refs/heads/releases/dev/v1";
     const expected = true;
     expect(matchManifest(manifest, repo, ref)).toEqual(expected);
   });
