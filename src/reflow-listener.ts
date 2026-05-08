@@ -67,6 +67,8 @@ export const handler: LambdaFunctionURLHandler = async (event, context) => {
 
   if (SQS_QUEUE_URL !== undefined) {
     console.log(`sending SQS message to ${SQS_QUEUE_URL}`);
+    // We avoid using `eventId` for deduplication ID, because sometimes we want to re-process the
+    //   same GitHub events after re-deploying new handlers for debugging purposes.
     const params: SendMessageCommandInput = {
       QueueUrl: SQS_QUEUE_URL,
       MessageBody: JSON.stringify(repoEvent),
