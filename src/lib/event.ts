@@ -10,7 +10,11 @@ export type RepositoryEvent = z.infer<typeof RepositoryEvent>;
 
 export type Repository = { owner: string; name: string };
 export const parseRepository = (repo: string): Repository | undefined => {
-  const [owner, name] = repo.split("/");
+  const components = repo.split("/");
+  if (components.length !== 2) {
+    return undefined;
+  }
+  const [owner, name] = components;
   if (owner === undefined || name === undefined) {
     return undefined;
   }

@@ -9,8 +9,14 @@ describe("parseRepository", () => {
     expect(parseRepository(input)).toEqual(expected);
   });
 
-  it("returns undefined for invalid input", () => {
+  it("returns undefined for invalid input with no slashes", () => {
     const input = "foo-bar";
+    const expected = undefined;
+    expect(parseRepository(input)).toEqual(expected);
+  });
+
+  it("returns undefined for invalid input with too many slashes", () => {
+    const input = "foo/bar/baz";
     const expected = undefined;
     expect(parseRepository(input)).toEqual(expected);
   });
