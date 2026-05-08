@@ -1,4 +1,4 @@
-import type { SQSHandler, SQSRecord } from "aws-lambda";
+import type { SQSBatchResponse, SQSHandler, SQSRecord } from "aws-lambda";
 import { App, type Octokit } from "octokit";
 import { z } from "zod";
 import assert from "node:assert";
@@ -68,7 +68,11 @@ export const handleEvent = async (
   }
 };
 
-const handleRecord = async (record: SQSRecord, src: WorkflowSource, octokit: Octokit) => {
+const handleRecord = async (
+  record: SQSRecord,
+  src: WorkflowSource,
+  octokit: Octokit,
+): Promise<string | undefined> => {
   const id = record.messageId;
   const body = record.body;
   console.log(`processing event '${id}'`);
@@ -85,7 +89,7 @@ const handleRecord = async (record: SQSRecord, src: WorkflowSource, octokit: Oct
     await handleEvent(event, src, octokit);
   } catch (error) {
     console.error(`could not process event: ${error} (id = ${id})`);
-    return;
+    return id;
   }
 
   console.log(`event '${id}' is processed successfully`);
@@ -106,5 +110,12 @@ export const handler: SQSHandler = async (event, context) => {
     ref: `refs/heads/${defaultBranch}`,
   };
 
-  await Promise.all(event.Records.map((record) => handleRecord(record, src, octokit)));
+  const promises = event.Records.map((record) => handleRecord(record, src, octokit));
+  const results = await Promise.all(promises);
+  const failures = results.filter((r) => r !== undefined);
+  const response: SQSBatchResponse = {
+    batchItemFailures: failures.map((f) => ({ itemIdentifier: f })),
+  };
+
+  return response;
 };
