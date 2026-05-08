@@ -1,3 +1,5 @@
+import { minimatch } from "minimatch";
+
 type KeyValuePair = {
   key: string;
   value: string | undefined;
@@ -10,13 +12,17 @@ const parseKeyValuePairs = (text: string): KeyValuePair[] => {
     .map(([key, value]) => ({ key: key ?? "", value }));
 };
 
-export type ReflowManifest = {
+export type ReflowTrigger = {
   repository: string;
   pushTargets: string[];
 };
 
-export const extractManifest = (workflowConfig: string): ReflowManifest | undefined | Error => {
-  const match = workflowConfig.match(/^\s*#\s*reflow:([^\n]+)\n/);
+export type ReflowManifest = {
+  triggers: ReflowTrigger[];
+};
+
+export const extractTrigger = (line: string): ReflowTrigger | undefined | Error => {
+  const match = line.match(/^\s*#\s*reflow:([^\n]+)$/);
   if (!match || !match[1]) {
     return undefined;
   }
@@ -34,4 +40,31 @@ export const extractManifest = (workflowConfig: string): ReflowManifest | undefi
   }
 
   return { repository, pushTargets };
+};
+
+export const extractManifest = (workflowConfig: string): ReflowManifest | Error => {
+  const triggers: ReflowTrigger[] = [];
+
+  const lines = workflowConfig.split("\n").map((l) => l.trim());
+  for (const line of lines.filter((l) => l.length > 0)) {
+    const trigger = extractTrigger(line);
+    if (trigger === undefined) {
+      break;
+    }
+    if (trigger instanceof Error) {
+      return trigger;
+    }
+    triggers.push(trigger);
+  }
+  return { triggers };
+};
+
+export const matchManifest = (
+  manifest: ReflowManifest,
+  repository: string,
+  ref: string,
+): boolean => {
+  const match = (t: ReflowTrigger): boolean =>
+    repository === t.repository && t.pushTargets.some((p) => minimatch(ref, p));
+  return manifest.triggers.some(match);
 };

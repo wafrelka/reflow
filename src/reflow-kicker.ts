@@ -1,10 +1,9 @@
 import type { SQSHandler, SQSRecord } from "aws-lambda";
 import { App, type Octokit } from "octokit";
-import { minimatch } from "minimatch";
 import { z } from "zod";
 import assert from "node:assert";
 
-import { extractManifest } from "./lib/manifest";
+import { extractManifest, matchManifest } from "./lib/manifest";
 import { parseRepository, RepositoryEvent } from "./lib/event";
 import { fetchParameter, loadExtensionConfigFromLambdaEnv } from "./lib/aws";
 import { fetchActiveWorkflows, fetchDefaultBranch } from "./lib/github";
@@ -52,18 +51,12 @@ export const handleEvent = async (
 
   for (const workflow of workflows) {
     const manifest = extractManifest(workflow.config);
-    if (manifest === undefined) {
-      continue;
-    }
     if (manifest instanceof Error) {
       console.warn(`error while parsing workflow config: ${workflow.name} ${manifest}`);
       continue;
     }
 
-    if (
-      event.repository === manifest.repository &&
-      manifest.pushTargets.some((p) => minimatch(pushData.ref, p))
-    ) {
+    if (matchManifest(manifest, event.repository, pushData.ref)) {
       console.log(`invoking workflow '${workflow.name}'`);
       await octokit.rest.actions.createWorkflowDispatch({
         owner: src.owner,
