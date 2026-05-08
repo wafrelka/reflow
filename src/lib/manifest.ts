@@ -14,7 +14,7 @@ const parseKeyValuePairs = (text: string): KeyValuePair[] => {
 
 export type ReflowTrigger = {
   repository: string;
-  pushTargets: string[];
+  pushes: string[];
 };
 
 export type ReflowManifest = {
@@ -34,12 +34,12 @@ export const extractTrigger = (line: string): ReflowTrigger | undefined | Error 
     return new Error("repository not specified");
   }
 
-  const pushTargets = pairs.get("push")?.split(",");
-  if (!pushTargets) {
+  const pushes = pairs.get("push")?.split(",");
+  if (!pushes) {
     return new Error("push target not specified");
   }
 
-  return { repository, pushTargets };
+  return { repository, pushes };
 };
 
 export const extractManifest = (workflowConfig: string): ReflowManifest | Error => {
@@ -65,6 +65,6 @@ export const matchManifest = (
   ref: string,
 ): boolean => {
   const match = (t: ReflowTrigger): boolean =>
-    repository === t.repository && t.pushTargets.some((p) => minimatch(ref, p));
+    repository === t.repository && t.pushes.some((p) => minimatch(ref, p));
   return manifest.triggers.some(match);
 };
